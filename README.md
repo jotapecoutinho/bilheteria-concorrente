@@ -40,9 +40,12 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
 
 ### Integrantes
 
-| Nome | Usuário do GitHub | Parte principal |
-| :--- | :--- | :--- |
-| | | |
+| Nome completo | RGM | Usuário do GitHub | Parte principal |
+| :--- | :--- | :--- | :--- |
+| João Pedro Coutinho Nóbrega | 33482799 | jotapecoutinho | `bilheteria.ts` — venda e concorrência |
+| Ramon Sávio Fontes Rocha | 33676402 | RamonSFR | `regras.ts` e `preco.ts` — meia-entrada e preço funcional |
+| João Pedro Urbano Silveira Bastos | 33029491 | JPU2004 | `dominio.ts` — erros e evento |
+| Adijair Pinto Viana Gonçalves de Araújo | 33296162 | Adijair | `main.ts`, servidor e bench |
 
 ### Decisões
 
