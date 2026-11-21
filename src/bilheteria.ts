@@ -1,6 +1,6 @@
 import type { Comprovante, ConfigBilheteria, EventoInfo, Pedido } from "./tipos.ts";
 import type { Evento } from "./dominio.ts";
-import { DadosInvalidosErro, NaoEncontradoErro } from "./dominio.ts";
+import { DadosInvalidosErro, NaoEncontradoErro, PagamentoErro } from "./dominio.ts";
 import type { Pagamento } from "./pagamento.ts";
 import { calcularTotal, montarIngressos } from "./preco.ts";
 import { direitoAMeia } from "./regras.ts";
@@ -37,7 +37,12 @@ export class Bilheteria {
     const ingressos = montarIngressos(evento.preco, pedido.ingressos, direitoAMeia);
     const total = calcularTotal(ingressos);
 
-    await this.#pagar(total);
+    try {
+      await this.#pagar(total);
+    } catch {
+      evento.liberar(poltronas);
+      throw new PagamentoErro("A operadora não aprovou o pagamento.");
+    }
 
     this.#ultimoReservaId += 1;
 
