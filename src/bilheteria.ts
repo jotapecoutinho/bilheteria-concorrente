@@ -5,6 +5,14 @@ import type { Pagamento } from "./pagamento.ts";
 import { calcularTotal, montarIngressos } from "./preco.ts";
 import { direitoAMeia } from "./regras.ts";
 
+function comTempoLimite<T>(promessa: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limite = new Promise<never>((_, rejeitar) => {
+    timer = setTimeout(() => rejeitar(new Error("Tempo limite excedido.")), ms);
+  });
+  return Promise.race([promessa, limite]).finally(() => clearTimeout(timer));
+}
+
 export class Bilheteria {
   readonly #eventos: Evento[];
   readonly #pagar: Pagamento;
@@ -38,7 +46,7 @@ export class Bilheteria {
     const total = calcularTotal(ingressos);
 
     try {
-      await this.#pagar(total);
+      await comTempoLimite(this.#pagar(total), this.#limitePagamentoMs);
     } catch {
       evento.liberar(poltronas);
       throw new PagamentoErro("A operadora não aprovou o pagamento.");
