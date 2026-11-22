@@ -66,6 +66,22 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
    pagamentos rodam concorrentemente sem fila nem trava global e sem risco de venda dupla.
 
 2. **OO.** O que o `Evento` esconde e por quê? Por que o `reservar` é tudo ou nada? Por que os erros são uma hierarquia de classes?
+
+   O `Evento` esconde o conjunto de poltronas vendidas no campo privado real do JavaScript
+   (`#poltronasVendidas = new Set<number>()`) e expõe apenas o getter `get disponivel()` (sem setter):
+   assim, nenhum código externo consegue adulterar o contador (`evento.disponivel = 999` falha com
+   `TypeError`) nem inserir poltronas inválidas, duplicadas ou fora de `1..capacidade` sem passar pelas
+   regras de `reservar` e `liberar`. O método `reservar` é **tudo ou nada** porque um pedido de família
+   ou grupo compra várias poltronas juntas: validamos o formato, o intervalo, a ausência de duplicatas
+   e a disponibilidade de **todas** as poltronas antes de gravar qualquer uma no `Set`; se marcássemos
+   durante o laço de verificação e a última poltrona estivesse ocupada, as primeiras ficariam presas
+   sem dono (ninguém comprou e ninguém mais conseguiria comprar). Já os erros formam uma hierarquia com
+   `ErroDeNegocio extends Error` (guardando `public readonly status: number`) e quatro subclasses
+   (`DadosInvalidosErro` `400`, `NaoEncontradoErro` `404`, `PoltronaOcupadaErro` `409` e `PagamentoErro`
+   `502`) para que o domínio expresse a falha pelo tipo sem acoplar com o Express, enquanto o middleware
+   de `servidor.ts` trata todos de forma polimórfica com um único `if (erro instanceof ErroDeNegocio)`
+   usando `res.status(erro.status)`.
+
 3. **Funcional.** O que ganhamos com `preco.ts` puro? Como vocês testariam ele sem subir o servidor?
 
    Em `preco.ts`, o cálculo não altera as pessoas nem os ingressos recebidos e não guarda estado entre
