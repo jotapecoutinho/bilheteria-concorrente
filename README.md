@@ -51,6 +51,20 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
 
 1. **Concorrência.** Como vocês garantem que duas pessoas não ficam com a mesma poltrona? Onde estava o
    `await` perigoso?
+
+   No Node.js, o JavaScript executa em uma única thread (Event Loop) e só cede a vez para outro pedido
+   quando encontra um `await`. Por isso, em `bilheteria.ts`, validamos o pedido e chamamos
+   `evento.reservar(poltronas)` de forma totalmente síncrona **antes** do `await comTempoLimite(this.#pagar(total), ...)`:
+   como não há nenhum `await` entre verificar se as poltronas estão livres e marcá-las no `Set` privado
+   do evento, dois pedidos que disputam o mesmo assento nunca se intercalam nessa etapa — o segundo já
+   encontra a poltrona ocupada e falha imediatamente com `PoltronaOcupadaErro` (`409`), sem acionar a
+   operadora. O `await` perigoso seria exatamente o da cobrança na operadora (`this.#pagar(total)`): se
+   verificássemos a disponibilidade antes do `await` e só marcássemos as poltronas depois dele, vários
+   pedidos simultâneos veriam a poltrona livre durante a espera da rede, cobrariam todos os clientes e
+   venderiam o mesmo lugar mais de uma vez. Com a reserva antes do `await` e o `try/catch` chamando
+   `evento.liberar(poltronas)` caso o pagamento falhe ou estoure o tempo limite (`Promise.race`), os
+   pagamentos rodam concorrentemente sem fila nem trava global e sem risco de venda dupla.
+
 2. **OO.** O que o `Evento` esconde e por quê? Por que o `reservar` é tudo ou nada? Por que os erros são uma hierarquia de classes?
 3. **Funcional.** O que ganhamos com `preco.ts` puro? Como vocês testariam ele sem subir o servidor?
 
@@ -78,6 +92,18 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
 
 5. **Concorrente × paralelo.** O Node roda o JavaScript numa linha só: os pedidos de vocês são
    concorrentes, não paralelos. O que mudaria se a venda rodasse em vários núcleos ao mesmo tempo?
+
+   No modelo atual do Node, os pedidos são **concorrentes** (vários pagamentos aguardam I/O ao mesmo
+   tempo), mas o código JavaScript que lê e altera `#poltronasVendidas` roda em uma única thread, um
+   trecho síncrono por vez — o que torna `evento.reservar(poltronas)` naturalmente atômico enquanto não
+   houver `await` no meio. Se a venda rodasse em paralelo de verdade em vários núcleos (por exemplo, com
+   `worker_threads` compartilhando memória ou vários processos acessando o mesmo estado), duas threads
+   poderiam executar o `for` de verificação de `evento.reservar` ao mesmo tempo em núcleos diferentes,
+   ambas enxergarem a poltrona livre e ambas gravarem a reserva, causando condição de corrida (*race
+   condition*) mesmo sem `await`. Nesse cenário paralelo, não bastaria reservar antes do `await`: seria
+   obrigatório sincronizar o acesso ao conjunto de poltronas com exclusão mútua (mutex/lock por evento
+   ou operação atômica do tipo *compare-and-swap* em memória compartilhada, ou transação/constraint de
+   unicidade em um banco de dados) para garantir que a leitura e a marcação continuassem indivisíveis.
 
 ### Resultados do bench
 
