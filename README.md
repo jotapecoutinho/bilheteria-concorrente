@@ -53,8 +53,29 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
    `await` perigoso?
 2. **OO.** O que o `Evento` esconde e por quê? Por que o `reservar` é tudo ou nada? Por que os erros são uma hierarquia de classes?
 3. **Funcional.** O que ganhamos com `preco.ts` puro? Como vocês testariam ele sem subir o servidor?
+
+   Em `preco.ts`, o cálculo não altera as pessoas nem os ingressos recebidos e não guarda estado entre
+   pedidos: com as mesmas entradas e a mesma regra de meia, obtemos o mesmo resultado. As funções
+   `valorDoIngresso` e `aplicarTaxa` devolvem funções que guardam o preço base ou o percentual em um
+   closure; `montarIngressos` recebe a regra de meia por parâmetro, usa `map` para criar um ingresso por
+   pessoa na mesma ordem, e `calcularTotal` usa `reduce` para somar antes de aplicar a taxa de 10% uma
+   única vez. Arredondamos a meia e o resultado da taxa para duas casas, evitando resíduos como
+   `36.660000000000004`; para testar sem servidor, basta importar as funções e conferir, por exemplo,
+   `valorDoIngresso(80)("meia") === 40`, `aplicarTaxa(0.1)(33.33) === 36.66` e
+   `calcularTotal([]) === 0`, além de passar outra regra de meia e entradas congeladas com
+   `Object.freeze` para verificar que a regra recebida é respeitada e não há mutação.
+
 4. **Se fosse em outro paradigma.** Escolham uma das partes e expliquem como ficaria em outro
    paradigma, e se ficaria melhor ou pior.
+
+   O cálculo de preço poderia ser imperativo: percorrer as pessoas com um `for`, preencher uma lista
+   com `push`, acumular os valores em uma variável e aplicar a taxa depois do laço. Essa versão poderia
+   produzir os mesmos resultados e também ser pura se só alterasse variáveis locais, mas exigiria
+   controlar explicitamente a lista e o acumulador, aumentando as oportunidades de esquecer um valor
+   ou aplicar a taxa no lugar errado. Para esta transformação de uma lista de pessoas em ingressos e
+   depois em um total, preferimos `map` e `reduce` porque deixam essas duas etapas claras; isso não
+   substitui o controle de estado das poltronas em `Evento`, que tem outra responsabilidade.
+
 5. **Concorrente × paralelo.** O Node roda o JavaScript numa linha só: os pedidos de vocês são
    concorrentes, não paralelos. O que mudaria se a venda rodasse em vários núcleos ao mesmo tempo?
 
