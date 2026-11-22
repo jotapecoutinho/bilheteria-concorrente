@@ -62,9 +62,9 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
 
 | Cenário | Pedidos | Tempo (ms) | Vendidos | Poltrona ocupada | Falha de pagamento |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| Padrão (`main.ts`) | 200 | | | | |
+| Padrão (`main.ts`) | 200 | 248 | 90 | 100 | 10 |
 
 O bench ocupa as poltronas do evento 1: para rodar de novo, parem o `npm start` (Ctrl+C) e subam outra
 vez.
 
-O que os números mostram:
+O que os números mostram: Dos 200 pedidos simultâneos disputando as 100 poltronas do evento 1 (dois por poltrona), exatamente 100 receberam `409` antes mesmo de acionar a operadora, garantindo que nenhuma poltrona fosse vendida duas vezes. Dos 100 pedidos que chegaram ao pagamento (com taxa de falha configurada em 10%), 90 foram aprovados (`201`) e 10 falharam na operadora (`502`), devolvendo essas 10 poltronas ao evento (`disponivel: 10` ao final). Como a reserva ocorre de forma síncrona antes do `await` e os pagamentos com latência de 80 ms aguardam de forma concorrente no Event Loop, todos os 200 pedidos terminaram em 248 ms (806 pedidos/s), muito abaixo dos cerca de 8.000 ms que 100 cobranças em série levariam.
