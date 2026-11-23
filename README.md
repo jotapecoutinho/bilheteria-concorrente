@@ -82,6 +82,8 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
    de `servidor.ts` trata todos de forma polimórfica com um único `if (erro instanceof ErroDeNegocio)`
    usando `res.status(erro.status)`.
 
+   Por exemplo, se o pedido inclui as poltronas 7 e 8 e a 8 já está ocupada, a 7 continua livre.
+
 3. **Funcional.** O que ganhamos com `preco.ts` puro? Como vocês testariam ele sem subir o servidor?
 
    Em `preco.ts`, o cálculo não altera as pessoas nem os ingressos recebidos e não guarda estado entre
