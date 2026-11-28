@@ -36,7 +36,7 @@ curl -X POST localhost:3000/reservas -H 'Content-Type: application/json' \
 
 ## Preencham (avaliado no vídeo)
 
-**Link do vídeo:** 
+**Link do vídeo:** https://drive.google.com/file/d/1Qr1GZ29g2T3-eA5Lqy_aVShh9BLIE4ns/view
 
 ### Integrantes
 
